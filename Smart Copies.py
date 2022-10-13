@@ -9,6 +9,7 @@ import ctypes
 import time
 handlers=[]
 
+# Excel data extraction and analysis
 CF_TEXT = 1
 kernel32 = ctypes.windll.kernel32
 kernel32.GlobalLock.argtypes = [ctypes.c_void_p]
@@ -30,19 +31,24 @@ def get_clipboard_text():
     finally:
         user32.CloseClipboard()
 
-class SC_CreateButtonPressedEventHandler(adsk.core.CommandCreatedEventHandler):
+### TO DO
+            ### Make it so that users can choose the project by puting it in a dropdown menu and make it work
+            ### Add the user parameters names are case sensitive option and make it work
+            ### Add the "impatient mode" where users will give a maximum amount of time for their files to be saved correctly to the cloud before moving to the next one and make it work
+
+
+# Here is what happens when the OK button of the dialog box is executed
+class cmdDefOKButtonPressedEventHandler(adsk.core.CommandEventHandler):
     def __init__(self):
         super().__init__()
     def notify(self,args):
-        ui = None
         try:
-            ### Make it so that users can choose the project by puting it in a dropdown menu
-            ### Add the user parameters names are case sensitive option
-            ### Add the "impatient mode" where users will give a maximum amount of time for their files to be saved correctly to the cloud before moving to the next one
-
+            eventArgs=adsk.core.CommandEventArgs.cast(args)
             app=adsk.core.Application.get()
             ui=app.userInterface
             design = app.activeProduct
+            inputs2=eventArgs.command.commandInputs
+
             dataProject = app.data.dataProjects[2]
             rootFolder = dataProject.rootFolder
             doc = app.activeDocument
@@ -121,6 +127,45 @@ class SC_CreateButtonPressedEventHandler(adsk.core.CommandCreatedEventHandler):
 
             msg = f'Files ["{file_names}"] were all saved to \n project: "{dataProject.name}"'
             ui.messageBox(msg)
+
+            #q=inputs2.itemById('DropDownCommandInput1').selectedItem.name
+            ui.messageBox("Juan")
+
+        except:
+            if ui:
+                ui.messageBox('Failed:\n{}'.format(traceback.format_exc()))
+
+# Here is the dialog box and its commandInputs
+class SC_CreateButtonPressedEventHandler(adsk.core.CommandCreatedEventHandler):
+    def __init__(self):
+        super().__init__()
+    def notify(self,args):
+        ui = None
+        try:
+            app=adsk.core.Application.get()
+            ui=app.userInterface
+            design = app.activeProduct
+
+            # Remember, once you resize a Dialog box it's default size will be forever modified to that. To fix it go and delete the file NULastDisplayedLayout.xml (if you recently used fusion check the date in case there are 2 or more in different folders [conflicts with inventor]) -> C:\Users\USER_NAME\AppData\Roaming\Autodesk\Neutron Platform\Options\VARIABLE_FOLDER\NULastDisplayedLayout.xml
+            # It's ok to delete the entire file and Fusion will just revert everything back to the default state. 
+            # To read more https://forums.autodesk.com/t5/fusion-360-api-and-scripts/how-do-you-change-the-size-of-a-command-dialog-box/td-p/6231098
+            
+            cmd = args.command
+            cmd.setDialogInitialSize(350, 125)
+            inputs=cmd.commandInputs
+            
+            DProjects_DropDown = inputs.addDropDownCommandInput('DropDownCommandInput1','Project Folder Name:',1)
+            inputs.addBoolValueInput('CaseSensitive_CheckboxInput', 'Case Sensitive Parameter Names:', True, '', True)
+            ValueInput1=adsk.core.ValueInput.createByReal(5)
+            inputs.addValueInput('MaxWaitTime_ValueInput', 'Maximum waiting time:', 's', ValueInput1)
+            DProjects_List=DProjects_DropDown.listItems
+            for nn in range(0,app.data.dataProjects.count):
+                DProjects_List.add(app.data.dataProjects.item(nn).name,False)
+            
+            onExecute = cmdDefOKButtonPressedEventHandler()
+            cmd.execute.add(onExecute)
+            handlers.append(onExecute)
+            
         except:
             if ui:
                 ui.messageBox('Failed:\n{}'.format(traceback.format_exc()))
