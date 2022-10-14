@@ -32,108 +32,12 @@ def get_clipboard_text():
         user32.CloseClipboard()
 
 ### TO DO
-            ### Make it so that users can choose the project by puting it in a dropdown menu and make it work
-            ### Add the user parameters names are case sensitive option and make it work
-            ### Add the "impatient mode" where users will give a maximum amount of time for their files to be saved correctly to the cloud before moving to the next one and make it work
-
-
-# Here is what happens when the OK button of the dialog box is executed
-class cmdDefOKButtonPressedEventHandler(adsk.core.CommandEventHandler):
-    def __init__(self):
-        super().__init__()
-    def notify(self,args):
-        try:
-            eventArgs=adsk.core.CommandEventArgs.cast(args)
-            app=adsk.core.Application.get()
-            ui=app.userInterface
-            design = app.activeProduct
-            inputs2=eventArgs.command.commandInputs
-
-            dataProject = app.data.dataProjects[2]
-            rootFolder = dataProject.rootFolder
-            doc = app.activeDocument
-            uParams = design.userParameters
-            # Gets excel table copied on clipboard
-            excel_clipboard = get_clipboard_text()
-            # Decodes excel table and converts it to string
-            excel_clipboard = excel_clipboard.decode('UTF-8')
-            excel_clipboard = str(excel_clipboard)
-            # Removes row delimiter \r and splits the table rows into lists
-            excel_clipboard = excel_clipboard.replace("\r","")
-            excel_clipboard = excel_clipboard.split("\n")
-            # Each column will be separated by special delimiter \t, so it will be used to split into individual words
-            for i in range(0,len(excel_clipboard)-1):
-                excel_clipboard[i] = excel_clipboard[i].split("\t")
-
-            # Sets column headers from the first list of excel_clipboard and removes it to avoid conflict
-            columnHeaders = excel_clipboard[0]
-            del excel_clipboard[0]
-            file_names = ""
-            # Iterates through data rows only (nameoffile and uparams names)
-            for i in range(len(excel_clipboard)-1):
-                row = excel_clipboard[i]
-                nameoffile = "SmartCopy_" + str(i+1)
-                saveworthy = True
-                # Iterates through each column of the row (values for the filenames [if provided] and user parameters)
-                for j in range(len(row)):
-                    word = row[j]        
-                    colheader = columnHeaders[j]
-                    # Checks if the column header refers to the file's name instead of a user parameter and sets it if that's the case
-                    if colheader.replace(" ","").replace("_","").lower() == "nameoffile":
-                        nameoffile = row[j]
-                    else:
-                        paramvalue = row[j].replace(" ", "")
-                        paramname = colheader
-                        try:
-                            ### Make it so there's an option that case sentiveness doesn't ruin everything by first iterating through all uparams and finds the one that matches
-                            # Update the user parameter by expression to avoid issues with units
-                            uParams.itemByName(paramname).expression = paramvalue
-                        except:
-                            # Exception so execution doesn't stop on mistake (for better or worse)
-                            ui.messageBox("Error while trying to update user parameter '" + paramname + "' with expresion '" + paramvalue + "'. File was not saved.")
-                            nameoffile = ""
-                            saveworthy = False
-                # Determines if the file is worthy of saving due to bad parameters and if it is, it saves it
-                try:
-                    if saveworthy:
-                        # Since the files are saved in the cloud, a syncronization filter is added so it can verify that the save is also completed in the cloud (if it isn't errors will occur, mainly the new file will be saved as a version of the previous) for more info check the isComplete property of the dataFile
-                        doc.saveAs(nameoffile, rootFolder, '', '')
-                        # donesaving determines when the version of the file in the cloud has already been saved
-                        donesaving = False
-                        starttime = time.time()
-                        tooktoolong = False
-                        messagecounter = 0
-                        #This block checks that each save doesnt take more than 20s, if it does it is forced to stop at 20
-                        #It also checks if the file is already saved to the cloud so it can move on with the next one
-                        while donesaving == False and tooktoolong == False:
-                            endtime = time.time()
-                            if endtime-starttime > 20 and messagecounter == 0:
-                                ui.messageBox("Since Fusion saves its files on the cloud and the internet Connection is slow or the files are too heavy; errors might occur. Wait time for each file is 20s")
-                                tooktoolong = True
-                                messagecounter = 1
-                            for i in range(dataProject.rootFolder.dataFiles.count):
-                                cloudfile = dataProject.rootFolder.dataFiles.item(i)
-                                if cloudfile.name == nameoffile:
-                                    if cloudfile.isComplete:
-                                        donesaving = True
-                except:
-                    ui.messageBox("Error while trying to save file '" + nameoffile + "' under project folder '" + dataProject.name)
-                    nameoffile = ""
-                # Appends all the file names into a single message
-                coma_or_not = ", "
-                if i == len(excel_clipboard)-2:
-                    coma_or_not = ""
-                file_names = file_names + nameoffile + coma_or_not
-
-            msg = f'Files ["{file_names}"] were all saved to \n project: "{dataProject.name}"'
-            ui.messageBox(msg)
-
-            #q=inputs2.itemById('DropDownCommandInput1').selectedItem.name
-            ui.messageBox("Juan")
-
-        except:
-            if ui:
-                ui.messageBox('Failed:\n{}'.format(traceback.format_exc()))
+            ### X  Make it so that users can choose the project by puting it in a dropdown menu and make it work
+            ###   Add the user parameters names are case sensitive option and make it work
+            ### X Add the "impatient mode" where users will give a maximum amount of time for their files to be saved correctly to the cloud before moving to the next one and make it work
+            ###   Add another button that saves the file (check the isSaved funcionalty in order to use save or saveAs) and times it
+            ###   Fix ammount of messages displayed in the for cycle with a messagecounter
+            ###   Add the function pointed down in a further down comment regarding the excel clipboard
 
 # Here is the dialog box and its commandInputs
 class SC_CreateButtonPressedEventHandler(adsk.core.CommandCreatedEventHandler):
@@ -151,21 +55,138 @@ class SC_CreateButtonPressedEventHandler(adsk.core.CommandCreatedEventHandler):
             # To read more https://forums.autodesk.com/t5/fusion-360-api-and-scripts/how-do-you-change-the-size-of-a-command-dialog-box/td-p/6231098
             
             cmd = args.command
-            cmd.setDialogInitialSize(350, 125)
+            cmd.setDialogInitialSize(360, 175)
             inputs=cmd.commandInputs
             
-            DProjects_DropDown = inputs.addDropDownCommandInput('DropDownCommandInput1','Project Folder Name:',1)
-            inputs.addBoolValueInput('CaseSensitive_CheckboxInput', 'Case Sensitive Parameter Names:', True, '', True)
-            ValueInput1=adsk.core.ValueInput.createByReal(5)
-            inputs.addValueInput('MaxWaitTime_ValueInput', 'Maximum waiting time:', 's', ValueInput1)
+            DProjects_DropDown = inputs.addDropDownCommandInput('DataProjectsDropdown_CommandInput','Project Folder Name:',1)
             DProjects_List=DProjects_DropDown.listItems
-            for nn in range(0,app.data.dataProjects.count):
-                DProjects_List.add(app.data.dataProjects.item(nn).name,False)
+            for i in range(0,app.data.dataProjects.count):
+                isSelected = False
+                if i == 2:
+                    isSelected = True
+                DProjects_List.add(app.data.dataProjects.item(i).name,isSelected)
+
+            ValueInput1 = adsk.core.ValueInput.createByReal(5)
+            inputs.addValueInput('MaxWaitTime_ValueInput', 'Maximum File Waiting Time:', 's', ValueInput1)
+            
+            inputs.addBoolValueInput('CaseSensitive_CheckboxInput', 'Case Sensitive Parameter Names:', True, '', True)
+            inputs.addBoolValueInput('StopSaving_CheckboxInput', 'Stop Queue If Wait Time is Exceeded:', True, '', False)
             
             onExecute = cmdDefOKButtonPressedEventHandler()
             cmd.execute.add(onExecute)
             handlers.append(onExecute)
             
+        except:
+            if ui:
+                ui.messageBox('Failed:\n{}'.format(traceback.format_exc()))
+
+# Here is what happens when the OK button of the dialog box is executed
+class cmdDefOKButtonPressedEventHandler(adsk.core.CommandEventHandler):
+    def __init__(self):
+        super().__init__()
+    def notify(self,args):
+        try:
+            eventArgs = adsk.core.CommandEventArgs.cast(args)
+            app = adsk.core.Application.get()
+            ui = app.userInterface
+            design = app.activeProduct
+            dialogBoxInputs = eventArgs.command.commandInputs
+
+            dataProjectName = dialogBoxInputs.itemById('DataProjectsDropdown_CommandInput').selectedItem.name
+            caseSensitive = dialogBoxInputs.itemById('CaseSensitive_CheckboxInput').value
+            excesiveTimeBreak = dialogBoxInputs.itemById('StopSaving_CheckboxInput').value
+            waitTime=dialogBoxInputs.itemById('MaxWaitTime_ValueInput').value
+
+            # Sets a minimum and maximum waiting time value to avoid issues like not enough or excesive file saving time
+            if waitTime < 1:
+                waitTime = 5
+            elif waitTime > 300:
+                waitTime = 300
+                
+            for i in range(app.data.dataProjects.count):
+                if app.data.dataProjects.item(i).name == dataProjectName:
+                    dataProject = app.data.dataProjects[i]
+            
+            rootFolder = dataProject.rootFolder
+            doc = app.activeDocument
+            uParams = design.userParameters
+
+            ### get this in a separate function
+            # Gets excel table copied on clipboard
+            excel_clipboard = get_clipboard_text()
+            # Decodes excel table and converts it to string
+            excel_clipboard = excel_clipboard.decode('UTF-8')
+            excel_clipboard = str(excel_clipboard)
+            # Removes row delimiter \r and splits the table rows into lists
+            excel_clipboard = excel_clipboard.replace("\r","")
+            excel_clipboard = excel_clipboard.split("\n")
+            # Each column will be separated by special delimiter \t, so it will be used to split into individual words
+            for i in range(0,len(excel_clipboard)-1):
+                excel_clipboard[i] = excel_clipboard[i].split("\t")
+
+            # Sets column headers from the first list of excel_clipboard and removes it to avoid conflict
+            columnHeaders = excel_clipboard[0]
+            del excel_clipboard[0]
+            file_names = ""
+            tooktoolong = False
+            # Iterates through data rows only (nameoffile and uparams names)
+            for i in range(len(excel_clipboard)-1):
+                # Checks if the save has taken more time than what was set as maximum and the Stop saving flag is enabled, if this condition occurs the process will stop
+                if tooktoolong==True and excesiveTimeBreak:
+                    pass
+                else:
+                    row = excel_clipboard[i]
+                    nameoffile = "SmartCopy_" + str(i+1)
+                    saveworthy = True
+                    # Iterates through each column of the row (values for the filenames [if provided] and user parameters)
+                    for j in range(len(row)):
+                        word = row[j]        
+                        colheader = columnHeaders[j]
+                        # Checks if the column header refers to the file's name instead of a user parameter and sets it if that's the case
+                        if colheader.replace(" ","").replace("_","").lower() == "nameoffile":
+                            nameoffile = row[j]
+                        else:
+                            paramvalue = row[j].replace(" ", "")
+                            paramname = colheader
+                            try:
+                                ### Make it so there's an option that case sentiveness doesn't ruin everything by first iterating through all uparams and finds the one that matches
+                                # Update the user parameter by expression to avoid issues with units
+                                uParams.itemByName(paramname).expression = paramvalue
+                            except:
+                                # Exception so execution doesn't stop on mistake (for better or worse)
+                                ui.messageBox("Error while trying to update user parameter '" + paramname + "' with expresion '" + paramvalue + "'. File was not saved.")
+                                nameoffile = ""
+                                saveworthy = False
+                    # Determines if the file is worthy of saving due to bad parameters and if it is, it saves it
+                    try:
+                        if saveworthy:
+                            # Since the files are saved in the cloud, a syncronization filter is added so it can verify that the save is also completed in the cloud (if it isn't errors will occur, mainly the new file will be saved as a version of the previous) for more info check the isComplete property of the dataFile
+                            doc.saveAs(nameoffile, rootFolder, '', '')
+                            # donesaving determines when the version of the file in the cloud has already been saved
+                            donesaving = False
+                            starttime = time.time()
+                            tooktoolong = False
+                            #This block checks that each save doesnt take more than 'waitTime' seconds, if it does it is forced to stop at 'waitTime' seconds
+                            #It also checks if the file is already saved to the cloud so it can move on with the next one
+                            while donesaving == False and tooktoolong == False:
+                                endtime = time.time()
+                                if endtime-starttime > waitTime:
+                                    tooktoolong = True
+                                    if excesiveTimeBreak:
+                                        ui.messageBox("Stop queue flag was enabled and time for saving the file was exceeded, no more files will be saved.")
+                                for i in range(dataProject.rootFolder.dataFiles.count):
+                                    cloudfile = dataProject.rootFolder.dataFiles.item(i)
+                                    if cloudfile.name == nameoffile:
+                                        if cloudfile.isComplete:
+                                            donesaving = True
+                    except:
+                        ui.messageBox("Error while trying to save file '" + nameoffile + "' under project folder '" + dataProject.name)
+                        nameoffile = ""
+                    file_names = file_names + nameoffile + ", "
+            file_names = file_names.rstrip(',')
+            msg = f'Files ["{file_names}"] were all saved to \n project: "{dataProject.name}"'
+            ui.messageBox(msg)
+            #app.activeDocument.close(False)
         except:
             if ui:
                 ui.messageBox('Failed:\n{}'.format(traceback.format_exc()))
