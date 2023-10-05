@@ -74,14 +74,6 @@ def check_uparams_exist(excel_clipboard,columnHeaders,caseSensitive):
                     allParamsExist = False
     return allParamsExist
 
-### TO DO
-            ### X  Make it so that users can choose the project by puting it in a dropdown menu and make it work
-            ### X  Add the user parameters names are case sensitive option and make it work
-            ### X Add the "impatient mode" where users will give a maximum amount of time for their files to be saved correctly to the cloud before moving to the next one and make it work
-            ### X  Add another button that saves the file (check the isSaved funcionalty in order to use save or saveAs) and times it
-            ### X  Fix ammount of messages displayed in the for cycle with a messagecounter
-            ### X  Add the function pointed down in a further down comment regarding the excel clipboard
-
 #region Clock Saving Time dialog box and execution event handler
 class SC_SavingTimeButton_PressedEventHandler(adsk.core.CommandCreatedEventHandler):
     def __init__(self):
@@ -246,10 +238,12 @@ class cmdDefOKButtonPressedEventHandler(adsk.core.CommandEventHandler):
                                 del invalidFileList[-1]
                                 invalidFileList.append(nameoffile)
                                 nameoffile = ""
-                        # Determines if the file is worthy of saving due to bad parameters and if it is, it saves it
+                        # Determines if the file is worthy of saving due to bad parameters
                         try:
                             if saveworthy:
-                                # Since the files are saved in the cloud, a syncronization filter is added so it can verify that the save is also completed in the cloud (if it isn't errors will occur, mainly the new file will be saved as a version of the previous) for more info check the isComplete property of the dataFile
+                                # Since the files are saved in the cloud, a syncronization filter is added so it can verify that the save is also completed in the cloud
+                                # If it isn't errors will occur, mainly the new file will be saved as a version of the previous.
+                                # For more info check the isComplete property of the dataFile...
                                 doc.saveAs(nameoffile, rootFolder, '', '')
                                 # donesaving determines when the version of the file in the cloud has already been saved
                                 donesaving = False
