@@ -1,2 +1,5 @@
 # F360SmartCopies
-Github project for the Fusion360 addin for automatic parameterization and copying of files.
+
+F360SmartCopies is a streamlined Fusion 360 designed to generate multiple variants stemming from a fully parameterized 3D model using an excel table with the model's parameters.
+
+![Diagram](https://github.com/CenturySturgeon/F360SmartCopies/blob/main/resources/WorkFlowDiagram.svg)
